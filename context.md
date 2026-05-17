@@ -1,121 +1,88 @@
-# Voice Time Manager — Project Context (v1.0)
+# Voice Time Manager — Project Context
 
-## Overview
+## Deployment model
 
-Multi-platform voice-controlled time tracking: plan your ideal day, start/stop activities by voice, and sync data through a shared Django API.
+| Layer | Development (now) | Production (later) |
+|-------|-------------------|---------------------|
+| **Frontend** | React `web/` on desktop → `:5180` | **GitHub Pages** only (`web/dist`) |
+| **Backend** | Django on **local desktop** → `:8100` | **GoDaddy VPS** (API + Postgres) |
+| **Database** | SQLite `backend/db.sqlite3` | PostgreSQL on VPS |
 
-## Architecture
+Root `index.html` PWA is legacy/reference — **not** deployed to GitHub.
 
 ```
-┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐
-│ index.html  │  │ React (web) │  │ Flutter     │  │ Electron /   │
-│ PWA + SW    │  │ :5180       │  │ iOS/Android │  │ Tizen        │
-└──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────────────┘
-       │ localStorage    │                │
-       └─────────────────┴────────────────┘
-                         │
-              ┌──────────▼──────────┐
-              │ Django REST :8100   │
-              │ django-cors-headers │
-              └──────────┬──────────┘
-                         │
-              ┌──────────▼──────────┐
-              │ SQLite (local dev)  │
-              │ PostgreSQL (VPS)    │
-              └─────────────────────┘
+  GitHub Pages                    GoDaddy VPS (production)
+ ┌─────────────────┐              ┌──────────────────────┐
+ │  React (web/)   │   HTTPS      │  Django API :8100    │
+ │  zub165.github  │ ──────────►  │  PostgreSQL          │
+ │  .io/AI-Time…   │   CORS       │  nginx → /api/       │
+ └─────────────────┘              └──────────────────────┘
+         ▲
+         │ dev: Vite proxy /api → 127.0.0.1:8100 (same machine)
+         └────────────────────────────────────────────────────
 ```
 
-## Port map (do not reuse busy ports)
+## Ports (do not reuse busy ports)
 
-| Service | Port | Notes |
-|---------|------|--------|
-| Django API | **8100** | `python manage.py runserver 127.0.0.1:8100` |
-| React (Vite) | **5180** | Avoids 5174–5177, 8001 |
-| Postgres (VPS) | 5432 | Docker on GoDaddy only |
-| Android emulator → API | 10.0.2.2:8100 | Flutter default |
-| iOS simulator → API | 127.0.0.1:8100 | Flutter default |
+| Service | Port |
+|---------|------|
+| Django API (local / VPS internal) | **8100** |
+| React Vite dev | **5180** |
+| Postgres (VPS) | 5432 |
 
 ## Repository layout
 
-| Path | Purpose |
-|------|---------|
-| `index.html`, `sw.js`, `manifest.json` | Original PWA (localStorage + optional API later) |
-| `backend/` | Django 6 + DRF, SQLite/Postgres |
-| `web/` | React + Vite client |
-| `mobile/` | Flutter (iOS + Android) |
-| `deploy/godaddy/` | VPS: Docker Compose, Nginx, `deploy.sh` |
-| `scripts/` | `start-dev.sh`, `build-mobile.sh` |
-| `releases/` | Built `.aab` / simulator artifacts |
-| `electron/`, `tizen/` | Desktop / TV wrappers (unchanged) |
+| Path | Role |
+|------|------|
+| `web/` | **Primary frontend** — React + Vite |
+| `backend/` | Django REST — local desktop now, VPS later |
+| `deploy/godaddy/` | VPS API + DB deploy (no React static) |
+| `mobile/` | Flutter apps (optional; point API URL at desktop or VPS) |
+| `index.html` | Legacy PWA (not on GitHub Pages) |
+
+## Local development (desktop)
+
+```bash
+# Both services
+./scripts/start-dev.sh
+
+# Or separate terminals
+./scripts/start-backend.sh   # :8100
+./scripts/start-frontend.sh  # :5180, proxies /api
+```
+
+React uses `web/.env.development` → `VITE_API_URL=/api`.
+
+## GitHub Pages (frontend only)
+
+- Workflow: `.github/workflows/deploy-pages.yml`
+- Builds `web/` with `VITE_BASE_PATH=/AI-TimeTable-Assistant/`
+- Live URL: `https://zub165.github.io/AI-TimeTable-Assistant/`
+
+Until VPS is ready, Pages build works but API shows offline (no `VITE_API_URL` secret).
+
+## GoDaddy VPS (backend + database)
+
+1. Deploy `backend/` with `USE_POSTGRES=True` — see `deploy/godaddy/README.md`
+2. Set `CORS_ALLOWED_ORIGINS` to `https://zub165.github.io`
+3. Expose API at e.g. `https://api.yourdomain.com/api`
+4. GitHub secret: `VITE_API_URL=https://api.yourdomain.com/api`
+5. Push `main` to rebuild Pages
 
 ## API endpoints
 
 - `GET /api/health/`
 - `GET|DELETE /api/activities/`
-- `POST /api/activities/start/` — body: `{ "name": "coding" }`
-- `POST /api/activities/stop/` — body: `{ "name": "coding" }`
-- `GET|PUT /api/schedule/` — day plan hours per category
-
-## Local development
-
-```bash
-# Terminal 1 — API
-cd backend && source .venv/bin/activate
-cp -n .env.example .env
-python manage.py migrate
-python manage.py runserver 127.0.0.1:8100
-
-# Terminal 2 — React
-cd web && npm install && npm run dev
-# http://127.0.0.1:5180
-
-# Terminal 3 — Flutter
-cd mobile && flutter run
-```
-
-Or: `./scripts/start-dev.sh`
-
-## GoDaddy VPS (future)
-
-1. Copy `backend/.env` with `USE_POSTGRES=True` and secrets.
-2. On server: `deploy/godaddy/deploy.sh`
-3. Optional: `docker compose -f deploy/godaddy/docker-compose.vps.yml up -d`
-4. Install `deploy/godaddy/nginx.conf` for TLS + reverse proxy.
-
-CORS in production: set `CORS_ALLOWED_ORIGINS` to your domain(s). In `DEBUG`, CORS allows all origins when the env var is empty.
-
-## Bugs fixed (v1.0)
-
-- **XSS**: Activity list uses `escapeHtml` + `data-action` delegation (no inline `onclick`).
-- **Schedule persistence**: `daySchedule` saved to `localStorage`; restored on load.
-- **Active sessions**: Restored from `startTimes` / `activeActivities` after refresh.
-- **Service worker**: Registers with `new URL('./sw.js', …)` for non-root hosting.
-- **Django `BASE_DIR`**: Was pointing at `.env` file; fixed to `backend/`.
-
-## Mobile builds (v1.0.0)
-
-```bash
-./scripts/build-mobile.sh
-# Output: releases/voice-time-manager-v1.0.0.aab
-```
-
-IPA requires Apple signing; simulator build: `flutter build ios --simulator`.
-
-## Deployment
-
-- **GitHub Pages**: workflow `.github/workflows/deploy-pages.yml` (PWA + React build).
-- **CI**: `.github/workflows/ci.yml` — backend, web, Flutter analyze.
-- **VPS**: `deploy/godaddy/` scripts (manual).
+- `POST /api/activities/start/` · `POST /api/activities/stop/`
+- `GET|PUT /api/schedule/`
 
 ## Environment variables
 
-**backend/.env** — see `.env.example`  
-**web/.env** — `VITE_API_URL=http://127.0.0.1:8100/api`  
-**Flutter** — `--dart-define=API_URL=http://your-host:8100/api`
+**Backend** `backend/.env` — see `.env.example`  
+**React dev** `web/.env.development` — `VITE_API_URL=/api`  
+**React prod** GitHub secret `VITE_API_URL` or `web/.env.production` from `.env.production.example`
 
-## Next steps
+## CI
 
-- Auth (JWT) for multi-user sync
-- Wire PWA `index.html` to REST API (offline queue)
-- App Store / Play Store signing pipelines
-- Prayer times API integration
+- `ci.yml` — tests backend + builds React (no deploy)
+- `deploy-pages.yml` — React → GitHub Pages only

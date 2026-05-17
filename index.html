@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Voice Time Manager</title>
     <meta name="description" content="Track your time by speaking and plan your ideal day with voice commands">
     <meta name="theme-color" content="#4361ee">
@@ -13,12 +15,23 @@
             --primary: #4361ee;
             --secondary: #3a0ca3;
             --accent: #7209b7;
+            --ai: #7b2cbf;
+            --ai-glow: rgba(123, 44, 191, 0.35);
             --light: #f8f9fa;
             --dark: #212529;
             --success: #4cc9f0;
             --warning: #f72585;
             --info: #4895ef;
             --prayer: #2a9d8f;
+            --space-xs: clamp(0.5rem, 1.5vw, 0.75rem);
+            --space-sm: clamp(0.75rem, 2vw, 1rem);
+            --space-md: clamp(1rem, 2.5vw, 1.5rem);
+            --space-lg: clamp(1.25rem, 3vw, 2rem);
+            --font-base: clamp(0.95rem, 1.8vw, 1.1rem);
+            --font-title: clamp(1.5rem, 4vw, 2.5rem);
+            --font-card: clamp(1.1rem, 2.5vw, 1.4rem);
+            --touch-min: 44px;
+            --focus-ring: 0 0 0 4px var(--ai-glow);
         }
         
         * {
@@ -31,16 +44,35 @@
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            min-height: 100dvh;
             padding: 0;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
             color: var(--dark);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-size: var(--font-base);
             line-height: 1.6;
+        }
+
+        body.device-tv {
+            font-size: clamp(1.1rem, 1.5vw, 1.35rem);
+            cursor: default;
+        }
+
+        body.device-phone .card:hover,
+        body.device-tablet .card:hover,
+        body.device-tv .card:hover {
+            transform: none;
         }
         
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: var(--space-md);
+        }
+
+        body.device-tv .container {
+            max-width: 1920px;
+            padding: var(--space-lg) 4vw;
         }
         
         header {
@@ -57,9 +89,138 @@
         h1 {
             color: var(--primary);
             margin-bottom: 15px;
-            font-size: 2.5rem;
+            font-size: var(--font-title);
             font-weight: 700;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.75rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.15), rgba(123, 44, 191, 0.15));
+            color: var(--secondary);
+        }
+
+        .ai-panel {
+            grid-column: 1 / -1;
+            background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(248,240,255,0.95));
+            border: 1px solid rgba(123, 44, 191, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 40%;
+            height: 200%;
+            background: radial-gradient(circle, var(--ai-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .ai-panel .card-title {
+            color: var(--ai);
+        }
+
+        .ai-status {
+            padding: var(--space-sm) var(--space-md);
+            border-radius: 12px;
+            background: rgba(123, 44, 191, 0.08);
+            border-left: 4px solid var(--ai);
+            margin-bottom: var(--space-md);
+            min-height: 3rem;
+        }
+
+        .ai-status.thinking {
+            animation: aiPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes aiPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.65; }
+        }
+
+        .ai-insights {
+            display: grid;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+        }
+
+        .ai-chip {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(67, 97, 238, 0.12);
+            font-size: 0.95em;
+        }
+
+        .ai-chip i {
+            color: var(--ai);
+            margin-top: 0.15rem;
+        }
+
+        .ai-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+        }
+
+        .btn-ai {
+            flex: 1 1 auto;
+            min-width: min(100%, 160px);
+            min-height: var(--touch-min);
+            background: linear-gradient(135deg, var(--ai), var(--primary));
+            margin-top: 0;
+        }
+
+        .btn-ai:focus-visible,
+        .focusable:focus-visible,
+        .mic-btn:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: none;
+            box-shadow: var(--focus-ring);
+        }
+
+        body.device-tv .focusable:focus,
+        body.device-tv button:focus,
+        body.device-tv .mic-btn:focus {
+            outline: 4px solid #fff;
+            outline-offset: 4px;
+            transform: scale(1.04);
+            z-index: 2;
+        }
+
+        body.device-tv .mic-btn {
+            width: 140px;
+            height: 140px;
+            font-size: 3.5rem;
+        }
+
+        body.device-tv .btn-small,
+        body.device-tv .btn-ai,
+        body.device-tv button {
+            min-height: 56px;
+            font-size: 1.15rem;
+            padding: 1rem 1.5rem;
+        }
+
+        body.device-tv input,
+        body.device-tv select {
+            min-height: 56px;
+            font-size: 1.15rem;
         }
         
         .description {
@@ -73,33 +234,92 @@
         .main-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
+            gap: var(--space-lg);
+            margin-bottom: var(--space-lg);
         }
-        
-        @media (max-width: 1200px) {
+
+        /* iPad / tablet landscape */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+            }
+            .ai-actions .btn-ai {
+                flex: 1 1 calc(50% - var(--space-sm));
+            }
+        }
+
+        /* iPhone / narrow phones */
+        @media (max-width: 767px) {
             .main-content {
                 grid-template-columns: 1fr;
-                gap: 25px;
+                gap: var(--space-md);
             }
-        }
-        
-        @media (max-width: 768px) {
             .container {
-                padding: 15px;
+                padding: var(--space-sm);
             }
-            
             header {
-                padding: 30px 20px;
-                margin-bottom: 25px;
+                padding: var(--space-lg) var(--space-md);
+                margin-bottom: var(--space-md);
             }
-            
-            h1 {
+            .description {
+                font-size: 1rem;
+            }
+            .data-controls {
+                flex-direction: column;
+            }
+            .data-controls button {
+                width: 100%;
+            }
+            .platform-stats {
+                grid-template-columns: 1fr;
+            }
+            .time-inputs {
+                grid-template-columns: 1fr;
+            }
+            .prayer-times {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .mic-btn {
+                width: 88px;
+                height: 88px;
                 font-size: 2rem;
             }
-            
-            .description {
-                font-size: 1.1rem;
+        }
+
+        /* Large iPad portrait / small desktop */
+        @media (max-width: 1200px) and (min-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Smart TV / large displays */
+        @media (min-width: 1280px) and (min-height: 720px) {
+            body.device-tv .main-content {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+            body.device-tv .main-content > div:first-child {
+                grid-column: span 2;
+            }
+            body.device-tv .card-title {
+                font-size: 1.6rem;
+            }
+        }
+
+        @media (pointer: coarse) and (hover: none) {
+            .card:hover {
+                transform: none;
+            }
+            button, .mic-btn, .btn-small {
+                min-height: var(--touch-min);
+                min-width: var(--touch-min);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
             }
         }
         
@@ -125,7 +345,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 1.4rem;
+            font-size: var(--font-card);
             font-weight: 600;
             border-bottom: 2px solid rgba(67, 97, 238, 0.1);
             padding-bottom: 15px;
@@ -802,6 +1022,12 @@
         .time-indicator .stop-btn:hover {
             background: #d63384;
         }
+
+        .platform.is-active-device {
+            outline: 3px solid var(--primary);
+            outline-offset: 2px;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.12), rgba(255, 255, 255, 0.9));
+        }
     </style>
 </head>
 <body>
@@ -809,17 +1035,29 @@
         <header>
             <h1><i class="fas fa-clock"></i> Voice Time Manager</h1>
             <p class="description">Track your time by speaking and plan your ideal day</p>
+            <p class="device-badge" id="deviceBadge" aria-live="polite"><i class="fas fa-desktop"></i> <span>Desktop</span></p>
         </header>
+
+        <section class="card ai-panel focusable" id="aiPanel" aria-label="AI Time Coach">
+            <h2 class="card-title"><i class="fas fa-robot"></i> AI Time Coach</h2>
+            <p class="ai-status" id="aiStatus" role="status">Analyzing your habits to personalize tips…</p>
+            <div class="ai-insights" id="aiInsights" aria-live="polite"></div>
+            <div class="ai-actions">
+                <button type="button" id="aiAnalyzeBtn" class="btn-ai focusable"><i class="fas fa-chart-line"></i> Analyze day</button>
+                <button type="button" id="aiOptimizeBtn" class="btn-ai focusable"><i class="fas fa-wand-magic-sparkles"></i> Optimize schedule</button>
+                <button type="button" id="aiSuggestBtn" class="btn-ai focusable"><i class="fas fa-compass"></i> What now?</button>
+            </div>
+        </section>
         
         <div class="main-content">
             <div>
-                <div class="card">
+                <div class="card focusable">
                     <h2 class="card-title">
                         <i class="fas fa-microphone"></i> Track Activities by Voice
                     </h2>
                     
                     <div class="voice-control">
-                        <button id="micButton" class="mic-btn" aria-label="Start voice recognition">
+                        <button id="micButton" class="mic-btn focusable" aria-label="Start voice recognition">
                             <i class="fas fa-microphone"></i>
                         </button>
                         <p class="status" id="status" role="status" aria-live="polite">Press the microphone to start tracking</p>
@@ -832,6 +1070,8 @@
                             <li>Say "Stop [activity]" to end tracking time for an activity</li>
                             <li>Say "How am I doing?" for time management advice</li>
                             <li>Say "Clear activities" to reset your day</li>
+                            <li>Say "Analyze my day" or "Optimize schedule" for AI coaching</li>
+                            <li>Say "What should I do" for a smart suggestion</li>
                             <li>Example: "Start coding", "Stop eating", "How am I doing?"</li>
                         </ul>
                     </div>
@@ -901,47 +1141,47 @@
                         <i class="fas fa-chart-pie"></i> Platform Usage
                     </h2>
                     
-                    <div class="platform-stats">
-                        <div class="platform">
+                    <div class="platform-stats" id="platformStats">
+                        <div class="platform" data-platform="computer">
                             <div class="platform-icon"><i class="fab fa-windows"></i></div>
                             <div class="platform-info">
                                 <div class="platform-name">Computer</div>
-                                <div class="platform-time">3.2 hours today</div>
+                                <div class="platform-time" data-platform-time="computer">0 h tracked</div>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 40%; background-color: var(--primary);"></div>
+                                    <div class="progress-fill" data-platform-bar="computer" style="width: 0%; background-color: var(--primary);"></div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="platform">
+                        <div class="platform" data-platform="phone">
                             <div class="platform-icon"><i class="fas fa-mobile-alt"></i></div>
                             <div class="platform-info">
                                 <div class="platform-name">Phone</div>
-                                <div class="platform-time">2.5 hours today</div>
+                                <div class="platform-time" data-platform-time="phone">0 h tracked</div>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 31%; background-color: var(--accent);"></div>
+                                    <div class="progress-fill" data-platform-bar="phone" style="width: 0%; background-color: var(--accent);"></div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="platform">
+                        <div class="platform" data-platform="tablet">
                             <div class="platform-icon"><i class="fas fa-tablet-alt"></i></div>
                             <div class="platform-info">
-                                <div class="platform-name">Tablet</div>
-                                <div class="platform-time">1.1 hours today</div>
+                                <div class="platform-name">Tablet / iPad</div>
+                                <div class="platform-time" data-platform-time="tablet">0 h tracked</div>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 14%; background-color: var(--info);"></div>
+                                    <div class="progress-fill" data-platform-bar="tablet" style="width: 0%; background-color: var(--info);"></div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="platform">
+                        <div class="platform" data-platform="tv">
                             <div class="platform-icon"><i class="fas fa-tv"></i></div>
                             <div class="platform-info">
                                 <div class="platform-name">TV</div>
-                                <div class="platform-time">1.8 hours today</div>
+                                <div class="platform-time" data-platform-time="tv">0 h tracked</div>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 22%; background-color: var(--warning);"></div>
+                                    <div class="progress-fill" data-platform-bar="tv" style="width: 0%; background-color: var(--warning);"></div>
                                 </div>
                             </div>
                         </div>
@@ -1081,6 +1321,100 @@
             return div.innerHTML;
         }
 
+        const DeviceUI = {
+            type: 'desktop',
+            icons: { phone: 'fa-mobile-alt', tablet: 'fa-tablet-alt', tv: 'fa-tv', desktop: 'fa-desktop' },
+            labels: { phone: 'iPhone / Phone', tablet: 'iPad / Tablet', tv: 'Smart TV', desktop: 'Desktop' },
+            detect() {
+                const ua = navigator.userAgent.toLowerCase();
+                const w = window.innerWidth;
+                const coarse = window.matchMedia('(pointer: coarse)').matches;
+                const tvUa = /smart-tv|smarttv|tizen|webos|googletv|appletv|hbbtv|netcast|viera/i.test(navigator.userAgent);
+                if (tvUa || (w >= 1600 && !coarse)) this.type = 'tv';
+                else if (/ipad|tablet|playbook|silk|(android(?!.*mobile))/i.test(ua) || (w >= 768 && w <= 1200 && coarse)) this.type = 'tablet';
+                else if (/iphone|ipod|android.*mobile|windows phone/i.test(ua) || w < 768) this.type = 'phone';
+                else this.type = 'desktop';
+                document.body.classList.remove('device-phone', 'device-tablet', 'device-desktop', 'device-tv');
+                document.body.classList.add('device-' + this.type);
+                const badge = document.getElementById('deviceBadge');
+                if (badge) badge.innerHTML = '<i class="fas ' + this.icons[this.type] + '"></i> <span>' + this.labels[this.type] + '</span>';
+                return this.type;
+            },
+            setupTVNavigation() {
+                if (this.type !== 'tv') return;
+                document.addEventListener('keydown', function(e) {
+                    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+                    e.preventDefault();
+                    var list = Array.from(document.querySelectorAll('button, input, select, .focusable')).filter(function(el) {
+                        return !el.disabled && el.offsetParent;
+                    });
+                    var idx = list.indexOf(document.activeElement);
+                    if (idx < 0 && list[0]) list[0].focus();
+                });
+            }
+        };
+
+        const AIEngine = {
+            setThinking: function(on) {
+                var el = document.getElementById('aiStatus');
+                if (el) el.classList.toggle('thinking', on);
+            },
+            renderChips: function(insights) {
+                var box = document.getElementById('aiInsights');
+                if (!box) return;
+                box.innerHTML = insights.map(function(text) {
+                    return '<div class="ai-chip"><i class="fas fa-wand-magic-sparkles"></i><span>' + escapeHtml(text) + '</span></div>';
+                }).join('');
+            },
+            analyze: function(tm) {
+                this.setThinking(true);
+                var chips = [];
+                var hour = new Date().getHours();
+                var totals = {};
+                tm.activities.forEach(function(a) {
+                    var c = tm.getActivityClass(a.name);
+                    totals[c] = (totals[c] || 0) + a.duration;
+                });
+                var planned = Object.values(tm.schedule).reduce(function(s, v) { return s + v; }, 0);
+                if (planned > 24) chips.push('Planned hours exceed 24h — trim work or entertainment.');
+                if ((totals.work || 0) > (tm.schedule.work || 8)) chips.push('Work time exceeds your plan — take a break.');
+                if ((totals.exercise || 0) < (tm.schedule.exercise || 1) * 0.5) chips.push('Add movement — 20 minutes helps.');
+                if (tm.activeActivities.size > 2) chips.push('Finish one activity before starting another.');
+                if (hour >= 22 && (totals.work || 0) > 2) chips.push('Late work hurts sleep — wind down soon.');
+                if (!chips.length) chips.push('Balanced day — protect your next focus block.');
+                this.renderChips(chips);
+                var st = document.getElementById('aiStatus');
+                if (st) st.textContent = 'AI analysis complete (' + DeviceUI.labels[DeviceUI.type] + ').';
+                this.setThinking(false);
+            },
+            optimizeSchedule: function(tm) {
+                this.setThinking(true);
+                var s = Object.assign({}, tm.schedule);
+                var total = Object.values(s).reduce(function(a, b) { return a + b; }, 0);
+                if (total > 24) {
+                    var scale = 23.5 / total;
+                    Object.keys(s).forEach(function(k) { s[k] = Math.round(s[k] * scale * 4) / 4; });
+                }
+                tm.schedule = s;
+                tm.applyScheduleToForm();
+                tm.updateSchedule(true);
+                document.getElementById('aiStatus').textContent = 'AI optimized your schedule to fit 24 hours.';
+                this.renderChips(['Schedule rebalanced for your device and time of day.']);
+                this.setThinking(false);
+                tm.speakText('Schedule optimized');
+            },
+            suggestNow: function(tm) {
+                this.setThinking(true);
+                var hour = new Date().getHours();
+                var pick = hour < 10 ? 'morning planning' : hour < 14 ? 'focused work' : hour < 18 ? 'exercise' : hour < 21 ? 'family time' : 'wind down';
+                var msg = 'Try: "' + pick + '" for ' + hour + ':00.';
+                document.getElementById('aiStatus').textContent = msg;
+                this.renderChips([msg, 'Say Start ' + pick + ' to track it.']);
+                this.setThinking(false);
+                tm.speakText(msg);
+            }
+        };
+
         // Data persistence and state management
         class TimeManager {
             constructor() {
@@ -1101,13 +1435,52 @@
             
             init() {
                 Object.keys(this.startTimes).forEach((name) => this.activeActivities.add(name));
+                DeviceUI.detect();
+                DeviceUI.setupTVNavigation();
+                window.addEventListener('resize', () => {
+                    DeviceUI.detect();
+                    this.updatePlatformStats();
+                });
                 this.applyScheduleToForm();
                 this.setupSpeechRecognition();
                 this.setupEventListeners();
                 this.loadActivities();
                 this.updateSchedule(false);
+                this.updatePlatformStats();
                 this.startScheduleMonitoring();
                 this.startTimeTracking();
+                setTimeout(() => AIEngine.analyze(this), 400);
+            }
+
+            setupAI() {
+                document.getElementById('aiAnalyzeBtn')?.addEventListener('click', () => {
+                    AIEngine.analyze(this);
+                    this.showNotification('AI Coach', document.getElementById('aiStatus')?.textContent || 'Done', 'success');
+                });
+                document.getElementById('aiOptimizeBtn')?.addEventListener('click', () => AIEngine.optimizeSchedule(this));
+                document.getElementById('aiSuggestBtn')?.addEventListener('click', () => AIEngine.suggestNow(this));
+            }
+
+            updatePlatformStats() {
+                const device = DeviceUI.type;
+                const mapDevice = { desktop: 'computer', phone: 'phone', tablet: 'tablet', tv: 'tv' };
+                const totalTracked = this.activities.reduce((s, a) => s + a.duration, 0);
+                const platforms = ['computer', 'phone', 'tablet', 'tv'];
+                const hours = { computer: 0, phone: 0, tablet: 0, tv: 0 };
+                hours[mapDevice[device] || 'computer'] = totalTracked;
+                if (totalTracked === 0) {
+                    hours.computer = device === 'desktop' ? 0 : 0;
+                }
+                const max = Math.max(totalTracked, 0.1);
+                platforms.forEach((p) => {
+                    const h = hours[p] || 0;
+                    const el = document.querySelector('[data-platform-time="' + p + '"]');
+                    const bar = document.querySelector('[data-platform-bar="' + p + '"]');
+                    const card = document.querySelector('[data-platform="' + p + '"]');
+                    if (el) el.textContent = h.toFixed(1) + ' h tracked' + (mapDevice[device] === p ? ' · this device' : '');
+                    if (bar) bar.style.width = Math.min(100, (h / max) * 100) + '%';
+                    if (card) card.classList.toggle('is-active-device', mapDevice[device] === p);
+                });
             }
 
             applyScheduleToForm() {
@@ -1177,6 +1550,7 @@
                 exportButton.addEventListener('click', () => this.exportData());
                 clearButton.addEventListener('click', () => this.clearAllData());
                 stopTrackingBtn.addEventListener('click', () => this.stopAllActivities());
+                this.setupAI();
 
                 document.getElementById('activityList').addEventListener('click', (e) => {
                     const btn = e.target.closest('[data-action]');
@@ -1243,8 +1617,12 @@
                     if (activity) {
                         this.stopActivity(activity);
                     }
-                } else if (lowerTranscript.includes('how am i doing') || lowerTranscript.includes('advice')) {
+                } else if (lowerTranscript.includes('how am i doing') || lowerTranscript.includes('advice') || lowerTranscript.includes('analyze')) {
                     this.giveAdvice();
+                } else if (lowerTranscript.includes('optimize') && lowerTranscript.includes('schedule')) {
+                    AIEngine.optimizeSchedule(this);
+                } else if (lowerTranscript.includes('what should i do') || lowerTranscript.includes('what now')) {
+                    AIEngine.suggestNow(this);
                 } else if (lowerTranscript.includes('clear') && lowerTranscript.includes('activities')) {
                     this.clearAllData();
                 }
@@ -1264,6 +1642,7 @@
                 this.speakText(`Started tracking time for ${activity}`);
                 this.renderActivities();
                 this.updateTimeIndicator();
+                this.updatePlatformStats();
                 
                 // Check if activity is within schedule
                 this.checkScheduleCompliance(activity);
@@ -1294,6 +1673,8 @@
                 this.speakText(`Stopped tracking time for ${activity}`);
                 this.renderActivities();
                 this.updateTimeIndicator();
+                this.updatePlatformStats();
+                AIEngine.analyze(this);
                 
                 // Show stop notification
                 this.showNotification('Activity Stopped', `Stopped tracking ${activity} after ${duration.toFixed(2)} hours`, 'success');
@@ -1399,38 +1780,15 @@
             }
             
             giveAdvice() {
-                const totalWorkTime = this.activities
-                    .filter(a => this.getActivityClass(a.name) === 'work')
-                    .reduce((sum, a) => sum + a.duration, 0);
-                
-                const totalEntertainmentTime = this.activities
-                    .filter(a => this.getActivityClass(a.name) === 'entertainment')
-                    .reduce((sum, a) => sum + a.duration, 0);
-                
-                const totalExerciseTime = this.activities
-                    .filter(a => this.getActivityClass(a.name) === 'exercise')
-                    .reduce((sum, a) => sum + a.duration, 0);
-                
-                let advice = "";
-                
-                if (totalWorkTime > 10) {
-                    advice = "You're working too much! Make sure to take breaks and maintain work-life balance.";
-                } else if (totalEntertainmentTime > 4) {
-                    advice = "You might be spending too much time on entertainment. Consider balancing with other activities.";
-                } else if (totalExerciseTime < 0.5) {
-                    advice = "Try to get at least 30 minutes of exercise today for better health.";
-                } else {
-                    advice = "You're doing well with balancing your time today. Keep it up!";
-                }
-                
+                AIEngine.analyze(this);
                 const adviceContainer = document.getElementById('adviceContainer');
                 const adviceText = document.getElementById('adviceText');
-                
-                adviceText.textContent = advice;
-                adviceContainer.style.display = 'block';
-                
+                const status = document.getElementById('aiStatus');
+                const advice = status ? status.textContent : 'AI advice ready.';
+                if (adviceText) adviceText.textContent = advice;
+                if (adviceContainer) adviceContainer.style.display = 'block';
                 this.speakText(advice);
-                this.updateStatus("Given time management advice");
+                this.updateStatus('AI time coaching updated');
             }
             
             speakText(text) {
@@ -1505,6 +1863,7 @@
                     this.showNotification('Schedule Updated', 
                         `Your daily schedule has been updated. Total planned time: ${totalTime} hours.`, 
                         'success');
+                    AIEngine.analyze(this);
                 }
             }
             
@@ -1536,6 +1895,8 @@
                     this.activeActivities.clear();
                     this.saveData();
                     this.renderActivities();
+                    this.updatePlatformStats();
+                    AIEngine.analyze(this);
                     this.updateStatus("All data cleared");
                 }
             }

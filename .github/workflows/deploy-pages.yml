@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Deploy React to GitHub Pages
 
 on:
   push:
@@ -24,18 +24,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: |
-          cd web
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build React app
+        working-directory: web
+        env:
+          # Repo Pages URL: https://<user>.github.io/<repo>/
+          VITE_BASE_PATH: /AI-TimeTable-Assistant/
+          # Set repository secret VITE_API_URL when GoDaddy VPS is live (e.g. https://api.yourdomain.com/api)
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
           npm ci
           npm run build
-      - name: Assemble site
-        run: |
-          mkdir -p _site
-          cp index.html manifest.json sw.js _site/
-          cp -r web/dist/* _site/app/ 2>/dev/null || cp -r web/dist/* _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: web/dist
       - id: deployment
         uses: actions/deploy-pages@v4

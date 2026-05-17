@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  checkHealth,
-  clearActivities,
-  fetchActivities,
-  fetchSchedule,
-  saveSchedule,
-  startActivity,
-  stopActivity,
-} from './api'
+import { buildInsights, detectDevice, optimizeSchedule, suggestActivity } from './ai'
+import { useTimeData } from './hooks/useTimeData'
 import './App.css'
 
 const DEFAULT_SCHEDULE = {
@@ -31,68 +24,93 @@ const SCHEDULE_LABELS = [
   { key: 'entertainment', label: 'Entertainment', color: '#7209b7' },
 ]
 
+const DEVICE_LABELS = {
+  phone: 'iPhone / Phone',
+  tablet: 'iPad / Tablet',
+  tv: 'Smart TV',
+  desktop: 'Desktop',
+}
+
 export default function App() {
-  const [apiOk, setApiOk] = useState(null)
-  const [activities, setActivities] = useState([])
-  const [activeSessions, setActiveSessions] = useState([])
-  const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE)
-  const [status, setStatus] = useState('Loading…')
   const [manualName, setManualName] = useState('')
   const [listening, setListening] = useState(false)
+  const [device, setDevice] = useState('desktop')
+  const [aiInsights, setAiInsights] = useState([])
+  const [aiStatus, setAiStatus] = useState('AI is ready to coach your day')
+  const [aiThinking, setAiThinking] = useState(false)
 
-  const load = useCallback(async () => {
-    try {
-      await checkHealth()
-      setApiOk(true)
-      const [act, sched] = await Promise.all([fetchActivities(), fetchSchedule()])
-      setActivities(act.activities || [])
-      setActiveSessions(act.active_sessions || [])
-      setSchedule({ ...DEFAULT_SCHEDULE, ...sched })
-      setStatus('Connected to API')
-    } catch {
-      setApiOk(false)
-      setStatus('API offline — start backend on port 8100')
-    }
-  }, [])
+  const runAI = useCallback((acts, sched, active) => {
+    const chips = buildInsights(acts, sched || DEFAULT_SCHEDULE, active)
+    setAiInsights(chips)
+    setAiStatus(`AI insights · ${DEVICE_LABELS[device] || device}`)
+  }, [device])
+
+  const {
+    apiOk,
+    useLocal,
+    activities,
+    activeSessions,
+    schedule,
+    status,
+    setStatus,
+    setSchedule,
+    load,
+    start,
+    stop,
+    saveSched,
+    clear,
+  } = useTimeData(runAI)
+
+  const sched = schedule || DEFAULT_SCHEDULE
 
   useEffect(() => {
+    const updateDevice = () => setDevice(detectDevice())
+    updateDevice()
+    window.addEventListener('resize', updateDevice)
     load()
-    const id = setInterval(load, 10000)
-    return () => clearInterval(id)
+    const id = setInterval(load, 15000)
+    return () => {
+      window.removeEventListener('resize', updateDevice)
+      clearInterval(id)
+    }
   }, [load])
 
+  useEffect(() => {
+    document.body.className = `device-${device}`
+    document.title = 'AI Time — Voice Time Manager'
+  }, [device])
+
   const totalPlanned = useMemo(
-    () => SCHEDULE_LABELS.reduce((s, { key }) => s + (Number(schedule[key]) || 0), 0),
-    [schedule],
+    () => SCHEDULE_LABELS.reduce((s, { key }) => s + (Number(sched[key]) || 0), 0),
+    [sched],
   )
 
   const handleStart = async (name) => {
     const n = (name || manualName).trim()
     if (!n) return
     try {
-      await startActivity(n)
+      await start(n)
       setManualName('')
       setStatus(`Started ${n}`)
-      await load()
     } catch (e) {
-      setStatus(e.response?.data?.error || 'Failed to start')
+      setStatus(e.message || e.response?.data?.error || 'Failed to start')
     }
   }
 
   const handleStop = async (name) => {
     try {
-      await stopActivity(name)
+      await stop(name)
       setStatus(`Stopped ${name}`)
-      await load()
     } catch (e) {
-      setStatus(e.response?.data?.error || 'Failed to stop')
+      setStatus(e.message || e.response?.data?.error || 'Failed to stop')
     }
   }
 
   const handleScheduleSave = async () => {
     try {
-      await saveSchedule(schedule)
+      await saveSched(sched)
       setStatus('Schedule saved')
+      runAI(activities, sched, activeSessions.length)
     } catch {
       setStatus('Failed to save schedule')
     }
@@ -100,15 +118,39 @@ export default function App() {
 
   const handleClear = async () => {
     if (!confirm('Clear all activities?')) return
-    await clearActivities()
-    await load()
+    await clear()
     setStatus('Cleared')
+  }
+
+  const handleAnalyze = () => {
+    setAiThinking(true)
+    runAI(activities, sched, activeSessions.length)
+    setAiThinking(false)
+  }
+
+  const handleOptimize = async () => {
+    setAiThinking(true)
+    const optimized = optimizeSchedule(sched)
+    setSchedule(optimized)
+    try {
+      await saveSched(optimized)
+      setAiStatus('AI optimized your 24-hour plan')
+      setAiInsights(['Schedule balanced for sleep, work, and recovery.'])
+    } finally {
+      setAiThinking(false)
+    }
+  }
+
+  const handleSuggest = () => {
+    const pick = suggestActivity()
+    setAiStatus(`Try: "${pick}"`)
+    setAiInsights([`Say or tap Start, then type "${pick}" to track it.`])
   }
 
   const toggleVoice = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) {
-      setStatus('Speech recognition not supported')
+      setStatus('Speech recognition not supported in this browser')
       return
     }
     if (listening) {
@@ -127,6 +169,12 @@ export default function App() {
       } else if (text.includes('stop')) {
         const name = text.split('stop')[1]?.trim()
         if (name) handleStop(name)
+      } else if (text.includes('analyze') || text.includes('advice')) {
+        handleAnalyze()
+      } else if (text.includes('optimize')) {
+        handleOptimize()
+      } else if (text.includes('what should') || text.includes('what now')) {
+        handleSuggest()
       }
     }
     rec.onend = () => setListening(false)
@@ -138,13 +186,37 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="header">
+      <header className="hero">
+        <p className="hero-kicker">AI Time</p>
         <h1>Voice Time Manager</h1>
-        <p className={`badge ${apiOk ? 'ok' : 'err'}`}>
-          {apiOk === null ? '…' : apiOk ? 'API online' : 'API offline'}
+        <p className="hero-sub">
+          Plan your day, track activities by voice, and get AI coaching on every device.
         </p>
+        <div className="hero-meta">
+          <span className="device-tag">{DEVICE_LABELS[device]}</span>
+          <span className={`badge ${apiOk ? 'ok' : 'warn'}`}>
+            {apiOk === null ? '…' : useLocal ? 'Browser storage' : 'Cloud API'}
+          </span>
+        </div>
         <p className="status" role="status">{status}</p>
       </header>
+
+      <section className="card ai-panel">
+        <h2>AI Time Coach</h2>
+        <p className={`ai-status ${aiThinking ? 'thinking' : ''}`}>{aiStatus}</p>
+        <ul className="ai-chips">
+          {aiInsights.length ? (
+            aiInsights.map((t, i) => <li key={i}>{t}</li>)
+          ) : (
+            <li>Tap Analyze day for personalized tips.</li>
+          )}
+        </ul>
+        <div className="ai-actions">
+          <button type="button" className="btn-ai" onClick={handleAnalyze}>Analyze day</button>
+          <button type="button" className="btn-ai" onClick={handleOptimize}>Optimize schedule</button>
+          <button type="button" className="btn-ai" onClick={handleSuggest}>What now?</button>
+        </div>
+      </section>
 
       <div className="grid">
         <section className="card">
@@ -153,8 +225,9 @@ export default function App() {
             <input
               value={manualName}
               onChange={(e) => setManualName(e.target.value)}
-              placeholder="Activity name"
+              placeholder="e.g. coding, prayer, exercise"
               aria-label="Activity name"
+              onKeyDown={(e) => e.key === 'Enter' && handleStart()}
             />
             <button type="button" onClick={() => handleStart()}>Start</button>
           </div>
@@ -164,7 +237,7 @@ export default function App() {
             onClick={toggleVoice}
             aria-label="Voice command"
           >
-            🎤 {listening ? 'Listening…' : 'Voice'}
+            {listening ? 'Listening…' : 'Voice command'}
           </button>
           <button type="button" className="danger" onClick={handleClear}>Clear all</button>
 
@@ -178,11 +251,11 @@ export default function App() {
             {activities.map((a) => (
               <li key={a.id} className="item">
                 <span>{a.name}</span>
-                <span>{a.duration_hours.toFixed(2)} h</span>
+                <span>{Number(a.duration_hours).toFixed(2)} h</span>
               </li>
             ))}
             {!activities.length && !activeSessions.length && (
-              <li className="item muted">No activities yet</li>
+              <li className="item muted">No activities yet — start one above</li>
             )}
           </ul>
         </section>
@@ -197,15 +270,18 @@ export default function App() {
                 min="0"
                 max="24"
                 step="0.25"
-                value={schedule[key]}
+                value={sched[key] ?? 0}
                 onChange={(e) =>
-                  setSchedule((s) => ({ ...s, [key]: parseFloat(e.target.value) || 0 }))
+                  setSchedule((s) => ({
+                    ...(s || DEFAULT_SCHEDULE),
+                    [key]: parseFloat(e.target.value) || 0,
+                  }))
                 }
               />
               <div
                 className="bar"
                 style={{
-                  width: `${((Number(schedule[key]) || 0) / 24) * 100}%`,
+                  width: `${((Number(sched[key]) || 0) / 24) * 100}%`,
                   backgroundColor: color,
                 }}
               />
@@ -217,6 +293,12 @@ export default function App() {
           </p>
         </section>
       </div>
+
+      <footer className="site-footer">
+        <p>
+          AI Time · Deployed on GitHub Pages · Backend runs on your desktop now, GoDaddy VPS later
+        </p>
+      </footer>
     </div>
   )
 }

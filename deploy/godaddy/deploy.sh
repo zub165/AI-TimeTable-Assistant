@@ -16,6 +16,6 @@ fi
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput 2>/dev/null || true
 
-echo "Start API: source .venv/bin/activate && gunicorn config.wsgi:application -b 127.0.0.1:8100"
-echo "Build React: cd ../web && npm ci && npm run build"
-echo "Copy deploy/godaddy/nginx.conf to /etc/nginx/sites-available/voice-time-manager"
+echo "Start API: gunicorn config.wsgi:application -b 127.0.0.1:8100"
+echo "Frontend: hosted on GitHub Pages — set secret VITE_API_URL to this server's public /api URL"
+echo "Copy deploy/godaddy/nginx.conf to /etc/nginx/sites-available/voice-time-manager-api"
