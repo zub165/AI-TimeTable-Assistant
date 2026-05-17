@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-voicetimemanager}
+      POSTGRES_USER: ${POSTGRES_USER:-vtm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  api:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../../backend/.env
+    environment:
+      USE_POSTGRES: "True"
+      POSTGRES_HOST: postgres
+    depends_on:
+      - postgres
+    ports:
+      - "127.0.0.1:8100:8100"
+
+volumes:
+  pgdata:

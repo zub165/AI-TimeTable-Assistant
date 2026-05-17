@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://yourdomain.com/voicetimemanager" version="1.0.0" viewmodes="maximized">
+    <tizen:application id="com.innovationgeneration.voicetimemanager" package="com.innovationgeneration.voicetimemanager" required_version="2.3"/>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
+    <feature name="http://tizen.org/feature/screen.size.normal.720.1280"/>
+    <feature name="http://tizen.org/feature/microphone"/>
+    <feature name="http://tizen.org/feature/speech.recognition"/>
+    <access origin="*" subdomains="true"/>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/microphone"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+    <tizen:profile name="tv-samsung"/>
+    <tizen:profile name="wearable"/>
+    <icon src="icon.png"/>
+    <name>Voice Time Manager</name>
+    <description>Track your time by speaking and plan your ideal day with voice commands</description>
+    <author href="http://yourdomain.com" email="support@voicetimemanager.com">Voice Time Manager Team</author>
+    <license href="http://opensource.org/licenses/MIT">MIT</license>
+    <tizen:metadata key="http://tizen.org/metadata/prefer_dotall" value="true"/>
+    <tizen:metadata key="http://tizen.org/metadata/use_user_gesture_for_audio_play" value="true"/>
+</widget>
