@@ -20,6 +20,7 @@ class DayScheduleSerializer(serializers.ModelSerializer):
         model = DaySchedule
         fields = [
             'client_id', 'sleep', 'work', 'eat', 'exercise',
-            'prayer', 'read', 'entertainment', 'updated_at',
+            'prayer', 'read', 'entertainment', 'daily_note',
+            'pomodoro_minutes', 'updated_at',
         ]
         read_only_fields = ['updated_at']

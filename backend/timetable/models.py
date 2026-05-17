@@ -36,6 +36,8 @@ class DaySchedule(models.Model):
     prayer = models.FloatField(default=0.5)
     read = models.FloatField(default=1)
     entertainment = models.FloatField(default=2)
+    daily_note = models.TextField(blank=True, default='')
+    pomodoro_minutes = models.PositiveIntegerField(default=25)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
